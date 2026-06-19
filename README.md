@@ -22,7 +22,7 @@
 
 ## ¿Qué hace?
 
-Herramienta de línea de comandos para sistemas Wenco. Se conecta a un SQL Server, detecta automáticamente las tablas de usuarios (`USUARIO`, `USUARIOS`, `ADMINISTRADOR`) en la base de datos `BDWENCO` y muestra las contraseñas descifradas resaltadas en color.
+Herramienta de línea de comandos en Linux para sistemas ERP basados en BDWenco. Se conecta a un SQL Server, detecta automáticamente las tablas de usuarios (`USUARIO`, `USUARIOS`, `ADMINISTRADOR`) en la base de datos `BDWENCO` y muestra las contraseñas descifradas resaltadas en color.
 
 ---
 
