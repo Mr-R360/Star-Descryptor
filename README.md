@@ -19,15 +19,17 @@ Herramienta de línea de comandos que se conecta a un servidor SQL Server con si
 ## Requisitos
 
 ```bash
-# Debian/Ubuntu — Driver ODBC
+# 1. Git
+apt-get install -y git
+
+# 2. Driver ODBC de Microsoft
 curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft-prod.gpg
 echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/mssql-release.list
 apt-get update && ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev
 
-# pyodbc
-apt-get install python3-pyodbc
-
-# Kali Linux
+# 3. pyodbc
+apt-get install -y python3-pyodbc
+# Kali Linux:
 pip3 install pyodbc --break-system-packages
 ```
 
