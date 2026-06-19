@@ -89,7 +89,7 @@ def pedir_parametros():
     print("  [3] Ingresar manualmente")
     op_inst = input("  Opción [1/2/3]           : ").strip()
     if op_inst == "2":
-        instancia = "SQLEXPRESS"
+        instancia = "sqlexpress"
     elif op_inst == "3":
         instancia = input("  Nombre de instancia      : ").strip() or None
     else:
