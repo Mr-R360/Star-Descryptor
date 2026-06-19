@@ -3,20 +3,18 @@ import sys
 import getpass
 
 BANNER = r"""
-  _____ _______ _    ____      ____  _____ ___  ____ ____  _____  _____  ___  ____
- / ___|___ /   / |  |  _ \    |  _ \| ____/ __|/ ___|  _ \|_   _|/ _ \ |  _ \
- \___ \ |_ \  / /   | | | |   | | | |  _| \___ \ |   | |_) | | || | | || |_) |
-  ___) |__) |/ /_   | |_| |   | |_| | |___ ___) | |___| _ <  | || |_| ||  _ <
- |____/____/|____|  |____/    |____/|_____|____/ \____|_| \_\ |_| \___/ |_| \_\
+  ____  _____  _    ____      ____  _____ ____   ____  ______   _______ ___  ____
+ / ___||_   _|/ \  |  _ \    |  _ \| ____/ ___| / ___|  _ \ \ / /  ___|_ _|/ ___| 
+ \___ \  | | / _ \ | |_) |   | | | |  _| \___ \| |   | |_) \ V /|___ \ | || |  _ 
+  ___) | | |/ ___ \|  _ <    | |_| | |___ ___) | |___|  _ < | |  ___) || || |_| |
+ |____/  |_/_/   \_\_| \_\   |____/|_____|____/ \____|_| \_\|_| |____/___| \____|
 """
 
 def print_banner():
-    print("=" * 75)
+    print("=" * 82)
     print(BANNER)
-    print("=" * 75)
-    print("  Star-Descryptor                                              v1.4")
-    print("  by mr.r360                                         remoto360.com")
-    print("=" * 75)
+    print("  >> Star-Descryptor v1.4  |  by mr.r360  |  remoto360.com <<")
+    print("=" * 82)
     print()
 
 # ─────────────────────────────────────────────
@@ -53,9 +51,9 @@ def conectar(ip, sql_user, sql_pass, instancia=None):
     try:
         import pyodbc
     except ImportError:
-        print("[!] pyodbc no instalado.")
-        print("    Debian/Ubuntu : apt-get install python3-pyodbc")
-        print("    Kali Linux    : pip3 install pyodbc --break-system-packages")
+        print("\n[!] ERROR: pyodbc no está instalado.")
+        print("    Ejecuta: apt-get install -y python3-pyodbc")
+        print("    En Kali: pip3 install pyodbc --break-system-packages\n")
         sys.exit(1)
 
     servidor = f"{ip}\\{instancia}" if instancia else ip
@@ -99,8 +97,8 @@ if not ip:
     print("[!] IP requerida.")
     sys.exit(1)
 
-conn     = None
-sa_pass  = None
+conn    = None
+sa_pass = None
 
 # ── Intento 1: SOPORTE / SOPORTE ──
 print(f"\n[~] Probando SOPORTE / SOPORTE ...")
@@ -109,12 +107,11 @@ conn = conectar(ip, "SOPORTE", "SOPORTE")
 # ── Intento 2: sa + contraseña pedida ──
 if not conn:
     print("[!] Falló con SOPORTE.")
-    print()
-    sa_pass = getpass.getpass("  Contraseña del usuario sa   : ")
+    sa_pass = getpass.getpass("\n  Contraseña del usuario sa   : ")
     print(f"[~] Probando sa ...")
     conn = conectar(ip, "sa", sa_pass)
 
-# ── Intento 3: pedir instancia y reintentar ambos ──
+# ── Intento 3: pedir instancia ──
 if not conn:
     print(f"[!] No se pudo conectar a {ip} con instancia por defecto.")
     instancia = input("  Nombre de instancia (ej: SQLEXPRESS) : ").strip()
