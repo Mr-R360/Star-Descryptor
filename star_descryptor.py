@@ -2,33 +2,46 @@
 import sys
 import getpass
 
-BANNER = """
- ****    ****    *    ****      ****   ****    ****   ****   *   *  ****   ****   ****
- *       *      * *   *  *     *   *  *      *      *       *   *  *   *  *   *  *   
- ****    *     *   *  ****     *   *  ****   ****   *       *****  ****   *   *  ****
-    *    *    *******  *  *    *   *  *         *   *       *   *  *  *   *   *  *   
- ****    *   *       * *   *   ****   ****  ****     ****   *   *  *   *  ****   ****
+try:
+    from colorama import Fore, Style, init
+    init(autoreset=True)
+    VERDE    = Fore.GREEN
+    AMARILLO = Fore.YELLOW
+    ROJO     = Fore.RED
+    CYAN     = Fore.CYAN
+    BOLD     = Style.BRIGHT
+    RESET    = Style.RESET_ALL
+except ImportError:
+    VERDE = AMARILLO = ROJO = CYAN = BOLD = RESET = ""
+
+BANNER = r"""
+ ███████╗████████╗ █████╗ ██████╗ 
+ ██╔════╝╚══██╔══╝██╔══██╗██╔══██╗
+ ███████╗   ██║   ███████║██████╔╝
+ ╚════██║   ██║   ██╔══██║██╔══██╗
+ ███████║   ██║   ██║  ██║██║  ██║
+ ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝
+
+ ██████╗ ███████╗███████╗ ██████╗██████╗ ██╗   ██╗████████╗ ██████╗ ██████╗ 
+ ██╔══██╗██╔════╝██╔════╝██╔════╝██╔══██╗╚██╗ ██╔╝╚══██╔══╝██╔═══██╗██╔══██╗
+ ██║  ██║█████╗  ███████╗██║     ██████╔╝ ╚████╔╝    ██║   ██║   ██║██████╔╝
+ ██║  ██║██╔══╝  ╚════██║██║     ██╔══██╗  ╚██╔╝     ██║   ██║   ██║██╔══██╗
+ ██████╔╝███████╗███████║╚██████╗██║  ██║   ██║      ██║   ╚██████╔╝██║  ██║
+ ╚═════╝ ╚══════╝╚══════╝ ╚═════╝╚═╝  ╚═╝   ╚═╝      ╚═╝    ╚═════╝ ╚═╝  ╚═╝
 """
 
-# Colores ANSI
-VERDE   = "\033[92m"
-AMARILLO= "\033[93m"
-ROJO    = "\033[91m"
-CYAN    = "\033[96m"
-BOLD    = "\033[1m"
-RESET   = "\033[0m"
-
 def print_banner():
-    linea = "=" * 90
-    print(CYAN + linea + RESET)
-    print(CYAN + BANNER + RESET)
-    print(BOLD + "       >> Star-Descryptor v1.7  |  by mr.r360  |  remoto360.com <<" + RESET)
-    print(CYAN + linea + RESET)
+    linea = "=" * 78
+    print(VERDE + linea + RESET)
+    print(VERDE + BOLD + BANNER + RESET)
+    print(BOLD + "  >> Star-Descryptor v1.8  |  by Mr-R360  |  remoto360.com <<" + RESET)
+    print(VERDE + linea + RESET)
     print()
 
-def ok(msg):   print(f"{VERDE}[+]{RESET} {msg}")
+def ok(msg):   print(f"{VERDE}{BOLD}[+]{RESET} {msg}")
 def info(msg): print(f"{AMARILLO}[~]{RESET} {msg}")
-def err(msg):  print(f"{ROJO}[!]{RESET} {msg}")
+def err(msg):  print(f"{ROJO}{BOLD}[!]{RESET} {msg}")
+
 
 # ─────────────────────────────────────────────
 #  ALGORITMO DE DESCIFRADO
@@ -58,19 +71,17 @@ def descifrar(texto_cifrado):
 
 
 # ─────────────────────────────────────────────
-#  RECOLECCIÓN DE PARÁMETROS AL INICIO
+#  PARÁMETROS AL INICIO
 # ─────────────────────────────────────────────
 def pedir_parametros():
     print(BOLD + "  [ CONFIGURACIÓN DE CONEXIÓN ]" + RESET)
     print()
 
-    # IP
     ip = input("  IP del servidor          : ").strip()
     if not ip:
         err("IP requerida.")
         sys.exit(1)
 
-    # Instancia
     print()
     print("  Instancia SQL Server:")
     print("  [1] Sin instancia (por defecto)")
@@ -84,7 +95,6 @@ def pedir_parametros():
     else:
         instancia = None
 
-    # Credenciales
     print()
     print("  Credenciales SQL Server:")
     print("  [1] SOPORTE / SOPORTE (por defecto)")
@@ -144,7 +154,10 @@ def conectar(ip, sql_user, sql_pass, instancia=None):
 # ─────────────────────────────────────────────
 def tabla_existe(conn, nombre):
     cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_CATALOG='BDWENCO' AND TABLE_SCHEMA='dbo' AND TABLE_NAME=?", nombre)
+    cur.execute("""
+        SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_CATALOG='BDWENCO' AND TABLE_SCHEMA='dbo' AND TABLE_NAME=?
+    """, nombre)
     return cur.fetchone()[0] > 0
 
 def leer_tabla(conn, tabla):
@@ -152,32 +165,42 @@ def leer_tabla(conn, tabla):
     if tabla == "USUARIO":
         cur.execute("SELECT USU_CODIGO, EMP_CODIGO, USU_NOMBRE, USU_PASSWORD FROM BDWENCO.dbo.USUARIO ORDER BY USU_CODIGO")
         cols = ["USU_CODIGO", "EMP_CODIGO", "USU_NOMBRE", "USU_PASSWORD"]
-    else:
+    elif tabla == "USUARIOS":
         cur.execute("SELECT USU_CODIGO, USU_NOMBRE, USU_PASSWORD, USU_CARGO, USU_ESTADO, USU_TIPO FROM BDWENCO.dbo.USUARIOS ORDER BY USU_CODIGO")
         cols = ["USU_CODIGO", "USU_NOMBRE", "USU_PASSWORD", "USU_CARGO", "USU_ESTADO", "USU_TIPO"]
+    elif tabla == "ADMINISTRADOR":
+        cur.execute("SELECT ADM_CODIGO, ADM_NOMBRE, ADM_PASSWORD, EMAIL, CARGO FROM BDWENCO.dbo.ADMINISTRADOR ORDER BY ADM_CODIGO")
+        cols = ["ADM_CODIGO", "ADM_NOMBRE", "ADM_PASSWORD", "EMAIL", "CARGO"]
     return cur.fetchall(), cols
 
 
 # ─────────────────────────────────────────────
-#  MOSTRAR RESULTADOS CON COLOR
+#  MOSTRAR CON COLORES
 # ─────────────────────────────────────────────
 def mostrar_tabla(filas, cols, titulo):
     if not filas:
-        info(f"Tabla {titulo} sin registros.")
+        info(f"Tabla {titulo} existe pero está vacía.")
         return
 
-    pwd_idx = cols.index("USU_PASSWORD")
+    # Columna de password según tabla
+    pwd_col = "ADM_PASSWORD" if "ADM_PASSWORD" in cols else "USU_PASSWORD"
+    pwd_idx = cols.index(pwd_col)
+
     col_w = []
     for c in cols:
-        col_w.append(26 if c in ("USU_NOMBRE", "USU_CARGO") else 14)
-    col_w[pwd_idx] = 22
+        if c in ("ADM_NOMBRE", "USU_NOMBRE", "USU_CARGO", "CARGO", "EMAIL"):
+            col_w.append(28)
+        elif c in ("ADM_PASSWORD", "USU_PASSWORD"):
+            col_w.append(22)
+        else:
+            col_w.append(14)
     col_w_full = col_w + [22]
     headers = cols + ["PWD DESCIFRADO"]
 
     sep = "─" * (sum(col_w_full) + len(col_w_full) * 3 + 1)
 
     print()
-    print(BOLD + CYAN + f"  ╔══ {titulo} ({len(filas)} registros) ══╗" + RESET)
+    print(CYAN + BOLD + f"  ╔══ {titulo} ({len(filas)} registros) ══╗" + RESET)
     print(sep)
     print(" " + BOLD + " | ".join(h.ljust(col_w_full[i]) for i, h in enumerate(headers)) + RESET)
     print(sep)
@@ -195,17 +218,14 @@ def mostrar_tabla(filas, cols, titulo):
         for i, v in enumerate(fila_display):
             celda = str(v).ljust(col_w_full[i])[:col_w_full[i]]
             if i == len(fila_display) - 1:
-                # Contraseña descifrada en verde y negrita
                 partes.append(VERDE + BOLD + celda + RESET)
             elif i == pwd_idx:
-                # Password cifrado en amarillo
                 partes.append(AMARILLO + celda + RESET)
             else:
                 partes.append(celda)
         print(" " + " | ".join(partes))
 
     print(sep)
-    print()
 
 
 # ─────────────────────────────────────────────
@@ -225,10 +245,10 @@ if not conn:
 
 try:
     print()
-    info("Buscando tablas de usuarios en BDWENCO...")
-
+    info("Buscando tablas en BDWENCO...")
     encontrado = False
-    for tabla in ["USUARIO", "USUARIOS"]:
+
+    for tabla in ["USUARIO", "USUARIOS", "ADMINISTRADOR"]:
         if tabla_existe(conn, tabla):
             filas, cols = leer_tabla(conn, tabla)
             if filas:
@@ -236,11 +256,12 @@ try:
                 mostrar_tabla(filas, cols, tabla)
             else:
                 info(f"Tabla {tabla} existe pero está vacía.")
-
+        
     if not encontrado:
-        err("No se encontraron datos en USUARIO ni USUARIOS.")
+        err("No se encontraron datos en ninguna tabla de usuarios.")
 
-    print(BOLD + f"[+] Star-Descryptor v1.7 — remoto360.com" + RESET)
+    print()
+    print(VERDE + BOLD + "[+] Star-Descryptor v1.8 — remoto360.com" + RESET)
     print()
 
 except Exception as e:
