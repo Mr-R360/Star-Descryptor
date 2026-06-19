@@ -3,18 +3,18 @@ import sys
 import getpass
 
 BANNER = r"""
-  ____  _____  _    ____      ____  _____ ____   ____  ______   _______ ___  ____
- / ___||_   _|/ \  |  _ \    |  _ \| ____/ ___| / ___|  _ \ \ / /  ___|_ _|/ ___| 
- \___ \  | | / _ \ | |_) |   | | | |  _| \___ \| |   | |_) \ V /|___ \ | || |  _ 
-  ___) | | |/ ___ \|  _ <    | |_| | |___ ___) | |___|  _ < | |  ___) || || |_| |
- |____/  |_/_/   \_\_| \_\   |____/|_____|____/ \____|_| \_\|_| |____/___| \____|
+  *        *      *****   *****      *****    *****    *****   *****   *   *   *****   *****   *****
+  *       * *       *     *    *       *      *          *    *     *  *   *     *     *   *   *    
+  *      *   *      *     *****        *      *****      *    *        *****     *     *****   *****
+  *     *******     *     *    *       *      *          *    *     *  *   *     *     *       *    
+  *****  *     *  *****   *     *    *****    *****    *****   *****   *   *   *****   *       *****
 """
 
 def print_banner():
-    print("=" * 82)
+    print("=" * 100)
     print(BANNER)
-    print("  >> Star-Descryptor v1.4  |  by mr.r360  |  remoto360.com <<")
-    print("=" * 82)
+    print("  >> Star-Descryptor v1.5  |  by mr.r360  |  remoto360.com <<")
+    print("=" * 100)
     print()
 
 # ─────────────────────────────────────────────
@@ -52,8 +52,8 @@ def conectar(ip, sql_user, sql_pass, instancia=None):
         import pyodbc
     except ImportError:
         print("\n[!] ERROR: pyodbc no está instalado.")
-        print("    Ejecuta: apt-get install -y python3-pyodbc")
-        print("    En Kali: pip3 install pyodbc --break-system-packages\n")
+        print("    Ejecuta : apt-get install -y python3-pyodbc")
+        print("    En Kali : pip3 install pyodbc --break-system-packages\n")
         sys.exit(1)
 
     servidor = f"{ip}\\{instancia}" if instancia else ip
@@ -77,14 +77,119 @@ def conectar(ip, sql_user, sql_pass, instancia=None):
     return None
 
 
-def leer_usuarios(conn):
+# ─────────────────────────────────────────────
+#  DETECTAR TABLA Y LEER USUARIOS
+# ─────────────────────────────────────────────
+def tabla_existe(conn, nombre_tabla):
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_CATALOG = 'BDWENCO'
+          AND TABLE_SCHEMA  = 'dbo'
+          AND TABLE_NAME    = ?
+    """, nombre_tabla)
+    return cursor.fetchone()[0] > 0
+
+def contar_registros(conn, nombre_tabla):
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT COUNT(*) FROM BDWENCO.dbo.{nombre_tabla}")
+    return cursor.fetchone()[0]
+
+def leer_tabla_usuario(conn):
+    """Tabla nueva: USUARIO (sin S)"""
     cursor = conn.cursor()
     cursor.execute("""
         SELECT USU_CODIGO, EMP_CODIGO, USU_NOMBRE, USU_PASSWORD
         FROM BDWENCO.dbo.USUARIO
         ORDER BY USU_CODIGO
     """)
-    return cursor.fetchall()
+    filas = cursor.fetchall()
+    cols  = ["USU_CODIGO", "EMP_CODIGO", "USU_NOMBRE", "USU_PASSWORD"]
+    return filas, cols
+
+def leer_tabla_usuarios(conn):
+    """Tabla antigua: USUARIOS (con S)"""
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT USU_CODIGO, USU_NOMBRE, USU_PASSWORD, USU_CARGO, USU_ESTADO, USU_TIPO
+        FROM BDWENCO.dbo.USUARIOS
+        ORDER BY USU_CODIGO
+    """)
+    filas = cursor.fetchall()
+    cols  = ["USU_CODIGO", "USU_NOMBRE", "USU_PASSWORD", "USU_CARGO", "USU_ESTADO", "USU_TIPO"]
+    return filas, cols
+
+def detectar_y_leer(conn):
+    tiene_usuario  = tabla_existe(conn, "USUARIO")
+    tiene_usuarios = tabla_existe(conn, "USUARIOS")
+
+    if tiene_usuario:
+        count = contar_registros(conn, "USUARIO")
+        if count > 0:
+            print(f"[+] Tabla detectada: USUARIO ({count} registros)")
+            return leer_tabla_usuario(conn), "USUARIO"
+
+    if tiene_usuarios:
+        count = contar_registros(conn, "USUARIOS")
+        if count > 0:
+            print(f"[+] Tabla detectada: USUARIOS ({count} registros)")
+            return leer_tabla_usuarios(conn), "USUARIOS"
+
+    # Fallback: intentar USUARIO aunque esté vacía
+    if tiene_usuario:
+        print("[~] Tabla USUARIO existe pero está vacía.")
+        return leer_tabla_usuario(conn), "USUARIO"
+
+    if tiene_usuarios:
+        print("[~] Tabla USUARIOS existe pero está vacía.")
+        return leer_tabla_usuarios(conn), "USUARIOS"
+
+    print("[!] No se encontró tabla USUARIO ni USUARIOS en BDWENCO.")
+    sys.exit(1)
+
+
+def mostrar_resultados(filas, cols, tabla):
+    if not filas:
+        print(f"[!] La tabla {tabla} no tiene registros.")
+        return
+
+    # Índice de la columna de password
+    pwd_idx = cols.index("USU_PASSWORD")
+
+    # Anchos de columna
+    col_w = []
+    for c in cols:
+        if c == "USU_NOMBRE" or c == "USU_CARGO":
+            col_w.append(28)
+        elif c == "USU_PASSWORD":
+            col_w.append(22)
+        else:
+            col_w.append(12)
+
+    headers_display = cols + ["PWD DESCIFRADO"]
+    col_w_full = col_w + [22]
+
+    sep = "─" * (sum(col_w_full) + len(col_w_full) * 3 + 1)
+    print(sep)
+    print(" " + " | ".join(h.ljust(col_w_full[i]) for i, h in enumerate(headers_display)))
+    print(sep)
+
+    for row in filas:
+        valores = [str(v or "").strip() for v in row]
+        pwd_enc = valores[pwd_idx]
+
+        try:
+            pwd_dec = descifrar(pwd_enc) if pwd_enc else "(vacío)"
+        except Exception as e:
+            pwd_dec = f"[ERR: {e}]"
+
+        fila_display = valores + [pwd_dec]
+        linea = " | ".join(str(v).ljust(col_w_full[i])[:col_w_full[i]] for i, v in enumerate(fila_display))
+        print(f" {linea}")
+
+    print(sep)
+    print(f"\n[+] Total usuarios procesados: {len(filas)}")
+    print(f"[+] Star-Descryptor v1.5 — remoto360.com\n")
 
 
 # ─────────────────────────────────────────────
@@ -127,41 +232,11 @@ if not conn:
     sys.exit(1)
 
 try:
-    print("\n[~] Leyendo tabla USUARIO...\n")
-    usuarios = leer_usuarios(conn)
-
-    if not usuarios:
-        print("[!] La tabla USUARIO está vacía.")
-        sys.exit(0)
-
-    col_w = [12, 12, 28, 22, 22]
-    headers = ["USU_CODIGO", "EMP_CODIGO", "USU_NOMBRE", "PWD CIFRADO", "PWD DESCIFRADO"]
-    sep = "─" * (sum(col_w) + len(col_w) * 3 + 1)
-
-    print(sep)
-    print(" " + " | ".join(h.ljust(col_w[i]) for i, h in enumerate(headers)))
-    print(sep)
-
-    for row in usuarios:
-        codigo  = str(row[0] or "").strip()
-        emp     = str(row[1] or "").strip()
-        nombre  = str(row[2] or "").strip()
-        pwd_enc = str(row[3] or "").strip()
-
-        try:
-            pwd_dec = descifrar(pwd_enc) if pwd_enc else "(vacío)"
-        except Exception as e:
-            pwd_dec = f"[ERR: {e}]"
-
-        valores = [codigo, emp, nombre, pwd_enc, pwd_dec]
-        linea = " | ".join(str(v).ljust(col_w[i])[:col_w[i]] for i, v in enumerate(valores))
-        print(f" {linea}")
-
-    print(sep)
-    print(f"\n[+] Total usuarios procesados: {len(usuarios)}")
-    print(f"[+] Star-Descryptor v1.4 — remoto360.com\n")
-
+    print("[~] Detectando tabla de usuarios...\n")
+    (filas, cols), tabla = detectar_y_leer(conn)
+    print()
+    mostrar_resultados(filas, cols, tabla)
 except Exception as e:
-    print(f"[!] Error al leer datos: {e}")
+    print(f"[!] Error: {e}")
 finally:
     conn.close()
