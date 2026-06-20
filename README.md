@@ -20,13 +20,33 @@
 
 ---
 
-## ¿Qué hace?
+## ⬇️ Descargas
 
-Herramienta de línea de comandos para sistemas "Estrellas". Se conecta a un SQL Server, detecta automáticamente las tablas de usuarios (`USUARIO`, `USUARIOS`, `ADMINISTRADOR`) en la base de datos `***ENCO` y muestra las contraseñas descifradas resaltadas en color. Al finalizar permite consultar otro servidor o salir.
+| Plataforma | Descarga | Notas |
+|---|---|---|
+| 🪟 Windows | [Instalador.Star-Descrytor.exe](https://github.com/Mr-R360/Star-Descryptor/releases/tag/1.9) | Incluye todas las dependencias |
+| 🐧 Linux | `git clone` (ver abajo) | Requiere Python 3 y pyodbc |
 
 ---
 
-## Requisitos
+## ¿Qué hace?
+
+Herramienta de línea de comandos para sistemas Wenco. Se conecta a un SQL Server, detecta automáticamente las tablas de usuarios (`USUARIO`, `USUARIOS`, `ADMINISTRADOR`) en la base de datos `BDWENCO` y muestra las contraseñas descifradas resaltadas en color. Al finalizar permite consultar otro servidor o salir.
+
+---
+
+## 🪟 Instalación Windows
+
+1. Descarga el instalador desde la sección [Releases](https://github.com/Mr-R360/Star-Descryptor/releases/tag/1.9)
+2. Ejecuta `Instalador.Star-Descrytor.exe` como administrador
+3. Sigue el asistente de instalación
+4. Abre Star-Descryptor desde el escritorio o menú inicio
+
+> No requiere Python ni ningún software adicional.
+
+---
+
+## 🐧 Instalación Linux
 
 ### 1. Git
 ```bash
@@ -54,18 +74,14 @@ apt-get install -y python3-pyodbc python3-colorama
 pip3 install pyodbc colorama --break-system-packages
 ```
 
----
-
-## Instalación
-
+### 4. Clonar y ejecutar
 ```bash
 git clone https://github.com/Mr-R360/Star-Descryptor.git
 cd Star-Descryptor
 python3 star_descryptor.py
 ```
 
-## Actualización
-
+### Actualización
 ```bash
 cd Star-Descryptor && git pull
 ```
@@ -106,7 +122,7 @@ Al terminar, el programa no se cierra — pregunta si deseas consultar otro serv
 
 ## Vista de resultados
 
-- 🟡 Contraseña cifrada → en amarillo  
+- 🟡 Contraseña cifrada → en amarillo
 - 🟢 **Contraseña descifrada → en verde y negrita**
 
 ---
