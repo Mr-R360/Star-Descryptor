@@ -22,7 +22,7 @@
 
 ## ¿Qué hace?
 
-Herramienta de línea de comandos para sistemas Wenco. Se conecta a un SQL Server, detecta automáticamente las tablas de usuarios (`USUARIO`, `USUARIOS`, `ADMINISTRADOR`) en la base de datos `BDWENCO` y muestra las contraseñas descifradas resaltadas en color. Al finalizar permite consultar otro servidor o salir.
+Herramienta de línea de comandos para sistemas "Estrellas". Se conecta a un SQL Server, detecta automáticamente las tablas de usuarios (`USUARIO`, `USUARIOS`, `ADMINISTRADOR`) en la base de datos `***ENCO` y muestra las contraseñas descifradas resaltadas en color. Al finalizar permite consultar otro servidor o salir.
 
 ---
 
